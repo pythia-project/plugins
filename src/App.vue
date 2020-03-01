@@ -20,7 +20,6 @@
 </template>
 
 <script>
-  // import CodeBlock from "./components/CodeBlock.vue";
   import Feedback from "./components/Feedback";
   export default {
     name: "App",
@@ -35,7 +34,7 @@
     data: () => ({
       submited: false,
       feedbackData: null,
-      taskInput: 'print("Hello World!")',
+      taskInput: 'print("Hello World!", end="")',
       error: null,
       executing: false
     }),
@@ -73,7 +72,7 @@
     },
     computed: {
       pythiaUrl() {
-        return this.url || window.PYTHIA_URL || "" 
+        return this.url || window.PYTHIA_URL || "http://localhost:8080"
       }
     }
   };
