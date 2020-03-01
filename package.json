@@ -20,6 +20,7 @@
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
     "test:e2e": "vue-cli-service test:e2e",
+    "test:e2e-headless": "vue-cli-service test:e2e --headless",
     "lint": "vue-cli-service lint",
     "validate": "npm-run-all --parallel lint test:unit"
   },
@@ -88,7 +89,7 @@
   "husky": {
     "hooks": {
       "pre-commit": "npm run validate",
-      "pre-push": "npm run validate"
+      "pre-push": "npm-run-all --parallel validate test:e2e-headless"
     }
   }
 }
