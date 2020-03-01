@@ -9,10 +9,9 @@ import vueCustomElement from 'vue-custom-element';
 import './plugins/codemirror';
 
 Vue.config.ignoredElements = [
-  'example-component'
+  'pythia-task-executor'
 ];
 
 Vue.use(vueCustomElement);
 
-Vue.customElement('example-component', App, {});
-
+Vue.customElement('pythia-task-executor', App, {});
