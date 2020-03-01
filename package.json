@@ -7,7 +7,7 @@
     "build": "vue-cli-service build",
     "test:unit": "vue-cli-service test:unit",
     "lint": "vue-cli-service lint",
-    "validate": "npm-run-all --parallel lint"
+    "validate": "npm-run-all --parallel lint test:unit"
   },
   "dependencies": {
     "bootstrap-vue": "^2.1.0",
