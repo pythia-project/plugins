@@ -1,7 +1,20 @@
 {
-  "name": "vue-web-comp-test",
-  "version": "0.1.0",
-  "private": true,
+  "name": "pythia-task-executor",
+  "version": "0.0.1",
+  "description": "Web component frontend to the Pythia framework to embed a form to execute a task and display the execution result.",
+  "author": {
+    "name": "The Pythia authors",
+    "email": "info@pythia-project.org"
+  },
+  "contributors": [
+    "Sébastien Combéfis",
+    "Guillaume de Moffarts"
+  ],
+  "license": "GPL-3.0-only",
+  "repository":{
+    "type": "git",
+    "url": "https://github.com/pythia-project/webcomp-plugin.git"
+  },
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
