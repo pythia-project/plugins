@@ -1,5 +1,6 @@
 import '@babel/polyfill'
 import 'mutationobserver-shim'
+import 'document-register-element/build/document-register-element';
 
 import Vue from 'vue'
 import './plugins/bootstrap-vue'
