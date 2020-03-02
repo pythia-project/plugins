@@ -9,7 +9,7 @@
     "test:e2e": "vue-cli-service test:e2e",
     "test:e2e-headless": "vue-cli-service test:e2e --headless",
     "lint": "vue-cli-service lint",
-    "validate": "npm-run-all --parallel lint test:unit"
+    "validate": "npm-run-all --parallel lint test:unit test:e2e-headless"
   },
   "dependencies": {
     "bootstrap-vue": "^2.1.0",
@@ -75,8 +75,8 @@
   ],
   "husky": {
     "hooks": {
-      "pre-commit": "npm run validate",
-      "pre-push": "npm-run-all --parallel validate test:e2e-headless"
+      "pre-commit": "npm run lint",
+      "pre-push": "npm run validate"
     }
   }
 }
