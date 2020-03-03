@@ -32,9 +32,14 @@
       tid: String
     },
     data: () => ({
+      taskInfos: {
+        type: "",
+        codeBase: 'while @@cond@@ @@fdssf@@:\n\tprint("hello @@world@@")',
+        input: ""
+      },
       submited: false,
       feedbackData: null,
-      taskInput: 'print("Hello World!", end="")',
+      taskInput: null,
       error: null,
       executing: false
     }),
@@ -74,6 +79,17 @@
       pythiaUrl() {
         return this.url || window.PYTHIA_URL || "http://localhost:8080"
       }
+    },
+    mounted () {
+      fetch(`${this.pythiaUrl}/api/tasks/${this.tid}`, {
+          method: "GET"
+        })
+      .then(response => {
+        return response.text();
+      })
+      .then(data => {
+        console.log(data)
+        })
     }
   };
 </script>
