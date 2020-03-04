@@ -39,7 +39,6 @@
       },
       submited: false,
       feedbackData: null,
-      taskInput: null,
       error: null,
       executing: false
     }),
@@ -50,7 +49,7 @@
           method: "POST",
           body: JSON.stringify({
             tid: this.tid,
-            input: this.taskInput
+            input: this.taskInfos.input
           })
         })
           .then(response => {

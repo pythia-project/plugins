@@ -16,139 +16,158 @@
         this.$emit("input", this.value);
       }
     },
+    computed: {
+      cm() {
+        return this.$refs.codemirror.codemirror;
+      }
+    },
     mounted() {
       const regex = /@[^@]*@([\w-]+)@[^@]*@/;
-      const emptyTag = "\u22c5\u22c5\u22c5";
 
-      this.$refs.codemirror.codemirror.addOverlay(
-        {
-          token: function(stream) {
-            if (stream.match(emptyTag)) {
-              return "empty-tag";
-            }
-            while (stream.next() != null && !stream.match(emptyTag, false)) {
-              continue;
-            }
-            return null;
+      let setEmptyTag = (from, to, name) => {
+        const emptyTag = "\u22c5\u22c5\u22c5";
+        // Replace the tag with the ...
+        this.cm.doc.replaceRange(emptyTag, from, to);
+
+        let endOfEmptyTag = { line: from.line, ch: from.ch + emptyTag.length };
+
+        // Place holder as editable
+        this.cm.doc.markText(from, endOfEmptyTag, {
+          className: "tag-empty",
+          attributes: { "data-name": name }
+        });
+        return endOfEmptyTag;
+      };
+
+      let getDocBoundaries = doc => {
+        let lastLineNumber = doc.lastLine();
+        return {
+          start: {
+            line: doc.firstLine(),
+            ch: 0
+          },
+          end: {
+            line: lastLineNumber,
+            ch: doc.getLine(lastLineNumber).length
           }
-        },
-        { opaque: true } // opaque will remove any spelling overlay etc
-      );
+        };
+      };
 
-      let lastEnd = { line: 0, ch: 0 };
-      this.$refs.codemirror.codemirror.doc.eachLine(line => {
-        let lineInfo = this.$refs.codemirror.codemirror.lineInfo(line);
-
-        for (let res of lineInfo.text.matchAll(new RegExp(regex, "g"))) {
-          let matchStartPos = this.$refs.codemirror.codemirror
-            .lineInfo(line)
-            .text.indexOf(res[0]);
-          let matchEndPos = matchStartPos + res[0].length;
+      let endOfLastMatch = getDocBoundaries(this.cm.doc).start;
+      this.cm.doc.eachLine(line => {
+        for (let res of this.cm
+          .lineInfo(line)
+          .text.matchAll(new RegExp(regex, "g"))) {
+          let lineInfo = this.cm.lineInfo(line);
+          let startOfMatch = {
+            line: lineInfo.line,
+            ch: lineInfo.text.indexOf(res[0])
+          };
+          let endOfMatch = {
+            ...startOfMatch,
+            ch: startOfMatch.ch + res[0].length
+          };
 
           // Put codeBase in readOnly
-          this.$refs.codemirror.codemirror.doc.markText(
-            lastEnd,
-            { line: lineInfo.line, ch: matchStartPos },
-            { className: "code-base", readOnly: true }
-          );
+          this.cm.doc.markText(endOfLastMatch, startOfMatch, {
+            className: "code-base"
+          });
 
-          this.$refs.codemirror.codemirror.doc.replaceRange(
-            emptyTag,
-            { line: lineInfo.line, ch: matchStartPos },
-            { line: lineInfo.line, ch: matchEndPos }
-          );
-
-          // Place holder as editable
-          this.$refs.codemirror.codemirror.doc.markText(
-            { line: lineInfo.line, ch: matchStartPos },
-            { line: lineInfo.line, ch: matchStartPos + emptyTag.length },
-            {
-              className: "tag-empty",
-              attributes: { "data-name": res[1] },
-              readOnly: false
-            }
-          );
-          lastEnd = { line: lineInfo.line, ch: matchStartPos + emptyTag.length };
+          endOfLastMatch = setEmptyTag(startOfMatch, endOfMatch, res[1]);
         }
-
-        // ReadOnly from last match to the end of the line
-        this.$refs.codemirror.codemirror.doc.markText(
-          lastEnd,
-          { line: lineInfo.line, ch: lineInfo.text.length },
-          { className: "code-base", readOnly: true }
-        );
+      });
+      // ReadOnly from last match to the end of the doc
+      this.cm.doc.markText(endOfLastMatch, getDocBoundaries(this.cm.doc).end, {
+        className: "code-base"
       });
 
-      this.$refs.codemirror.codemirror.on("cursorActivity", cm => {
-        let cursorPos = cm.doc.getCursor();
-        let markers = cm.doc.findMarksAt(cursorPos);
+      // Return the marker of the tag that is left by the currsor.
+      // It doesn't return anything if the cursor is still on the tag or was not on a tag
+      let leftTag = doc => {
+        let cursorPos = doc.getCursor();
 
-        for (let mark of cm.doc.getAllMarks().filter(m => m.className == "tag")) {
-          let tagAtCursor = markers
+        let tagsMarkersOfDoc = doc
+          .getAllMarks()
+          .filter(m => m.className == "tag");
+
+        for (let marker of tagsMarkersOfDoc) {
+          let tagsMarkersIdAtCursor = doc
+            .findMarksAt(cursorPos)
             .filter(m => m.className == "tag")
             .map(m => m.id);
-          let pos = mark.find();
+
+          let tagPos = marker.find();
+
           if (
-            !tagAtCursor.find(x => x == mark.id) &&
-            cm.doc.getRange(pos.from, pos.to).trim() == ""
+            !tagsMarkersIdAtCursor.find(x => x == marker.id) &&
+            doc.getRange(tagPos.from, tagPos.to).trim() == ""
           ) {
-            cm.doc
-              .findMarks(pos.from, pos.to)
-              .filter(m => m.className == "start-tag" || m.className == "end-tag")
-              .forEach(m => (m.readOnly = false));
-
-            cm.doc.replaceRange(emptyTag, pos.from, pos.to);
-
-            this.$refs.codemirror.codemirror.doc.markText(
-              pos.from,
-              { line: pos.from.line, ch: pos.from.ch + 3 },
-              {
-                className: "tag-empty",
-                attributes: { "data-name": mark.attributes["data-name"] },
-                readOnly: false
-              }
-            );
+            return marker;
           }
         }
+      };
 
-        for (let marker of markers) {
-          let markerPos = marker.find();
+      // Reset to empty tag when leaving the tag empty
+      this.cm.on("cursorActivity", cm => {
+        let tagMarker = leftTag(cm.doc);
+
+        if (tagMarker) {
+          let tagPos = tagMarker.find();
+          cm.doc
+            .findMarks(tagPos.from, tagPos.to)
+            .filter(m => m.className == "b-tag")
+            .forEach(m => (m.readOnly = false));
+
+          setEmptyTag(tagPos.from, tagPos.to, tagMarker.attributes["data-name"]);
+        }
+      });
+
+      // Remove the empty tag when cursor on it
+      this.cm.on("cursorActivity", cm => {
+        let cursorPos = cm.doc.getCursor();
+        let markersAtCursor = cm.doc.findMarksAt(cursorPos);
+        const emptyTagReplacement = "  ";
+
+        for (let marker of markersAtCursor) {
           if (marker.className == "tag-empty") {
-            cm.doc.replaceRange("  ", markerPos.from, markerPos.to);
+            let markerPos = marker.find();
 
-            cm.doc.markText(
-              {
-                line: markerPos.from.line,
-                ch: markerPos.from.ch - 1
-              },
-              {
-                line: markerPos.from.line,
-                ch: markerPos.from.ch + 1
-              },
-              { readOnly: true, className: "start-tag" }
-            );
-
-            cm.doc.markText(
-              {
-                line: markerPos.from.line,
-                ch: markerPos.from.ch + 1
-              },
-              {
-                line: markerPos.from.line,
-                ch: markerPos.from.ch + 3
-              },
-              { readOnly: true, className: "end-tag" }
-            );
-
-            cm.doc.setCursor({
-              line: markerPos.from.line,
-              ch: markerPos.from.ch + 1
-            });
-
-            // Place holder as editable
-            this.$refs.codemirror.codemirror.doc.markText(
+            cm.doc.replaceRange(
+              emptyTagReplacement,
               markerPos.from,
-              { line: markerPos.from.line, ch: markerPos.from.ch + 2 },
+              markerPos.to
+            );
+
+            let newTagMiddlePos = {
+              line: markerPos.from.line,
+              ch: markerPos.from.ch + Math.floor(emptyTagReplacement.length / 2)
+            };
+
+            cm.doc.markText(
+              { ...markerPos.from, ch: markerPos.from.ch },
+              newTagMiddlePos,
+              {
+                className: "b-tag"
+              }
+            );
+
+            cm.doc.markText(
+              newTagMiddlePos,
+              {
+                ...newTagMiddlePos,
+                ch: markerPos.from.ch + emptyTagReplacement.length
+              },
+              { className: "b-tag" }
+            );
+
+            cm.doc.setCursor(newTagMiddlePos);
+
+            this.cm.doc.markText(
+              markerPos.from,
+              {
+                line: markerPos.from.line,
+                ch: markerPos.from.ch + emptyTagReplacement.length
+              },
               {
                 className: "tag",
                 attributes: { "data-name": marker.attributes["data-name"] }
@@ -159,13 +178,79 @@
       });
 
       // Prevent editing first and last position of the doc
-      this.$refs.codemirror.codemirror.on("beforeChange", (cm, change) => {
-        if (
-          (change.from.line == cm.doc.firstLine() && change.from.ch == 0) ||
-          (change.from.line == cm.doc.lastLine() &&
-            change.from.ch == cm.doc.getLine(cm.doc.lastLine()).length)
-        ) {
-          change.cancel();
+      this.cm.on("beforeChange", (cm, change) => {
+        let tagsNames = cm.doc
+          .findMarks(change.from, change.to)
+          .map(m => m.className);
+        if (change.origin == "+input") {
+          if (!tagsNames.find(m => m == "tag")) {
+            change.cancel();
+
+            // If next to a tag replace range to modify the tag content
+            let tagToMod = cm.doc
+              .findMarks(
+                { ...change.from, ch: change.from.ch - 1 },
+                { ...change.to, ch: change.to.ch + 1 }
+              )
+              .find(m => m.className == "tag");
+
+            if (tagToMod) {
+              let tagToModPos = tagToMod.find();
+              let currentText = cm.doc.getRange(tagToModPos.from, tagToModPos.to);
+              cm.doc.replaceRange(
+                currentText + change.text.join(""),
+                tagToModPos.from,
+                tagToModPos.to
+              );
+
+              cm.doc.markText(
+                tagToModPos.from,
+                {
+                  ...tagToModPos.from,
+                  ch:
+                    tagToModPos.from.ch + change.text.length + currentText.length
+                },
+                {
+                  attributes: {
+                    "data-name": tagToMod.attributes["data-name"]
+                  },
+                  className: "tag"
+                }
+              );
+            }
+          }
+        } else if (change.origin == "+delete") {
+          let tagMark = cm.doc
+            .findMarks(change.from, change.to)
+            .find(m => m.className == "tag");
+          if (tagMark) {
+            let tagPos = tagMark.find();
+            if (cm.doc.getRange(tagPos.from, tagPos.to).length <= 1) {
+              setEmptyTag(
+                tagPos.from,
+                tagPos.to,
+                tagMark.attributes["data-name"]
+              );
+            }
+          }
+          if (
+            tagsNames.find(m => m == "b-tag") ||
+            !tagsNames.find(m => m == "tag")
+          ) {
+            change.cancel();
+          }
+        }
+      });
+
+      this.cm.on("change", (cm, change) => {
+        if (change.origin == "+input") {
+          let bTags = cm.doc.getAllMarks().filter(m => m.className == "b-tag");
+          for (let bTag of bTags) {
+            let bTagPos = bTag.find();
+            bTag.readOnly = false;
+            cm.doc.replaceRange("", bTagPos.from, bTagPos.to);
+            bTag.readOnly = true;
+          }
         }
       });
     }
@@ -175,5 +260,9 @@
   .tag,
   .tag-empty {
     background: #ffffff1c;
+  }
+
+  .tag-empty {
+    color: white !important;
   }
 </style>
