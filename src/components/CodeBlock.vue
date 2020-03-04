@@ -35,10 +35,10 @@
         { opaque: true } // opaque will remove any spelling overlay etc
       );
 
+      let lastEnd = { line: 0, ch: 0 };
       this.$refs.codemirror.codemirror.doc.eachLine(line => {
         let lineInfo = this.$refs.codemirror.codemirror.lineInfo(line);
 
-        let lastEnd = 0;
         for (let res of lineInfo.text.matchAll(new RegExp(regex, "g"))) {
           let matchStartPos = this.$refs.codemirror.codemirror
             .lineInfo(line)
@@ -47,7 +47,7 @@
 
           // Put codeBase in readOnly
           this.$refs.codemirror.codemirror.doc.markText(
-            { line: lineInfo.line, ch: lastEnd },
+            lastEnd,
             { line: lineInfo.line, ch: matchStartPos },
             { className: "code-base", readOnly: true }
           );
@@ -68,12 +68,12 @@
               readOnly: false
             }
           );
-          lastEnd = matchStartPos + emptyTag.length;
+          lastEnd = { line: lineInfo.line, ch: matchStartPos + emptyTag.length };
         }
 
         // ReadOnly from last match to the end of the line
         this.$refs.codemirror.codemirror.doc.markText(
-          { line: lineInfo.line, ch: lastEnd },
+          lastEnd,
           { line: lineInfo.line, ch: lineInfo.text.length },
           { className: "code-base", readOnly: true }
         );
@@ -87,16 +87,17 @@
           let tagAtCursor = markers
             .filter(m => m.className == "tag")
             .map(m => m.id);
-            let pos = mark.find();
-          if (!tagAtCursor.find(x => x == mark.id) && cm.doc.getRange(pos.from, pos.to).trim() == "") {
-
+          let pos = mark.find();
+          if (
+            !tagAtCursor.find(x => x == mark.id) &&
+            cm.doc.getRange(pos.from, pos.to).trim() == ""
+          ) {
             cm.doc
               .findMarks(pos.from, pos.to)
               .filter(m => m.className == "start-tag" || m.className == "end-tag")
               .forEach(m => (m.readOnly = false));
 
             cm.doc.replaceRange(emptyTag, pos.from, pos.to);
-
 
             this.$refs.codemirror.codemirror.doc.markText(
               pos.from,
@@ -154,6 +155,17 @@
               }
             );
           }
+        }
+      });
+
+      // Prevent editing first and last position of the doc
+      this.$refs.codemirror.codemirror.on("beforeChange", (cm, change) => {
+        if (
+          (change.from.line == cm.doc.firstLine() && change.from.ch == 0) ||
+          (change.from.line == cm.doc.lastLine() &&
+            change.from.ch == cm.doc.getLine(cm.doc.lastLine()).length)
+        ) {
+          change.cancel();
         }
       });
     }
