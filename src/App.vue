@@ -2,7 +2,7 @@
   <b-container class="bv-example-row">
     <b-row>
       <b-col>
-        <CodeBlock v-model="taskInput" />
+        <CodeBlock v-model="taskInfos" />
       </b-col>
     </b-row>
     <b-row>
