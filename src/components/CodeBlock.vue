@@ -179,14 +179,12 @@
 
       // Prevent editing first and last position of the doc
       this.cm.on("beforeChange", (cm, change) => {
+        if (!change.origin) return;
         let tagsNames = cm.doc
           .findMarks(change.from, change.to)
           .map(m => m.className);
-        if (change.origin == "+input") {
+        if (change.text[0] != "") {
           if (!tagsNames.find(m => m == "tag")) {
-            change.cancel();
-
-            // If next to a tag replace range to modify the tag content
             let tagToMod = cm.doc
               .findMarks(
                 { ...change.from, ch: change.from.ch - 1 },
@@ -197,18 +195,23 @@
             if (tagToMod) {
               let tagToModPos = tagToMod.find();
               let currentText = cm.doc.getRange(tagToModPos.from, tagToModPos.to);
-              cm.doc.replaceRange(
-                currentText + change.text.join(""),
-                tagToModPos.from,
-                tagToModPos.to
-              );
+              let cursorPos = cm.doc.getCursor();
 
+              let newText;
+
+              if (change.to.ch <= tagToModPos.from.ch) {
+                newText = change.text.join("") + currentText;
+              } else if (change.from.ch >= tagToModPos.to.ch) {
+                newText = currentText + change.text.join("");
+              } else {
+                return;
+              }
+              cm.doc.replaceRange(newText, tagToModPos.from, tagToModPos.to);
               cm.doc.markText(
                 tagToModPos.from,
                 {
                   ...tagToModPos.from,
-                  ch:
-                    tagToModPos.from.ch + change.text.length + currentText.length
+                  ch: tagToModPos.from.ch + newText.length
                 },
                 {
                   attributes: {
@@ -217,9 +220,13 @@
                   className: "tag"
                 }
               );
+
+              cursorPos.ch += change.text.length;
+              cm.doc.setCursor(cursorPos);
             }
+            change.cancel();
           }
-        } else if (change.origin == "+delete") {
+        } else {
           let tagMark = cm.doc
             .findMarks(change.from, change.to)
             .find(m => m.className == "tag");
@@ -243,7 +250,8 @@
       });
 
       this.cm.on("change", (cm, change) => {
-        if (change.origin == "+input") {
+        if (!change.origin) return;
+        if (change.text[0] != "") {
           let bTags = cm.doc.getAllMarks().filter(m => m.className == "b-tag");
           for (let bTag of bTags) {
             let bTagPos = bTag.find();
