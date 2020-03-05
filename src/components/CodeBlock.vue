@@ -1,20 +1,13 @@
 <template>
-  <codemirror ref="codemirror" :value="value.codeBase" @input="updateInput"></codemirror>
+  <codemirror ref="codemirror" :value="value.codeBase"></codemirror>
 </template>
 
 <script>
+  import Vue from "vue";
   export default {
     name: "CodeBlock",
     props: {
       value: Object
-    },
-    data: () => ({}),
-    methods: {
-      updateInput(val) {
-        // replace by tags value
-        this.value.input = val;
-        this.$emit("input", this.value);
-      }
     },
     computed: {
       cm() {
@@ -250,9 +243,28 @@
       });
 
       this.cm.on("change", (cm, change) => {
+        let allMarks = cm.doc.getAllMarks();
+        let tagMarks = allMarks.filter(m => m.className == "tag");
+        let emptyTag = allMarks.filter(m => m.className == "tag-empty");
+        for (let mark of tagMarks) {
+          let markPos = mark.find();
+          Vue.set(
+            this.value.input,
+            mark.attributes["data-name"],
+            cm.doc.getRange(markPos.from, markPos.to)
+          );
+        }
+        for (let mark of emptyTag) {
+          Vue.set(
+            this.value.input,
+            mark.attributes["data-name"],
+            ""
+          );
+        }
+        this.$emit("input", this.value);
         if (!change.origin) return;
         if (change.text[0] != "") {
-          let bTags = cm.doc.getAllMarks().filter(m => m.className == "b-tag");
+          let bTags = allMarks.filter(m => m.className == "b-tag");
           for (let bTag of bTags) {
             let bTagPos = bTag.find();
             bTag.readOnly = false;
