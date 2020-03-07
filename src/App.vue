@@ -35,7 +35,7 @@
       taskInfos: {
         type: "",
         codeBase: 'while @@cond@@ @@fdssf@@:\n\tprint("hello @@world@@")',
-        input: ""
+        input: {}
       },
       submited: false,
       feedbackData: null,
