@@ -34,7 +34,7 @@
     data: () => ({
       taskInfos: {
         type: "",
-        codeBase: 'while @@cond@@ @@fdssf@@:\n\tprint("hello @@world@@")',
+        codeBase: 'while @@cond@@ @@another@@:\n\tprint("hello @@world@@")',
         input: {}
       },
       submited: false,
