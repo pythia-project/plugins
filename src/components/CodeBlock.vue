@@ -20,7 +20,7 @@
       let setEmptyTag = (from, to, name) => {
         const emptyTag = "\u22c5\u22c5\u22c5";
         // Replace the tag with the ...
-        this.cm.doc.replaceRange(emptyTag, from, to);
+        this.cm.doc.replaceRange(emptyTag, from, to, "pythia-set-empty");
 
         let endOfEmptyTag = { line: from.line, ch: from.ch + emptyTag.length };
 
@@ -30,6 +30,38 @@
           attributes: { "data-name": name }
         });
         return endOfEmptyTag;
+      };
+
+      let setBlankTags = (cm, tag) => {
+        let tagPos = tag.find();
+        let prevCursorPos = cm.doc.getCursor();
+        let newCursorPos = { ...prevCursorPos, ch: prevCursorPos.ch + 1 };
+        cm.doc.replaceRange(
+          " ",
+          tagPos.from,
+          tagPos.from,
+          "pythia-set-one-space"
+        );
+        cm.doc.markText(
+          tagPos.from,
+          { ...tagPos.from, ch: tagPos.from.ch + 1 },
+          {
+            className: "b-tag",
+            attributes: { "data-name": tag.attributes["data-name"] },
+            readOnly: true
+          }
+        );
+        cm.doc.replaceRange(" ", tagPos.to, tagPos.to, "pythia-set-one-space");
+        cm.doc.markText(
+          tagPos.to,
+          { ...tagPos.to, ch: tagPos.to.ch + 1 },
+          {
+            className: "b-tag",
+            attributes: { "data-name": tag.attributes["data-name"] },
+            readOnly: true
+          }
+        );
+        cm.doc.setCursor(newCursorPos);
       };
 
       let getDocBoundaries = doc => {
@@ -44,6 +76,10 @@
             ch: doc.getLine(lastLineNumber).length
           }
         };
+      };
+
+      let posEqual = (p1, p2) => {
+        return p1.line == p2.line && p1.ch == p2.ch;
       };
 
       let endOfLastMatch = getDocBoundaries(this.cm.doc).start;
@@ -63,7 +99,8 @@
 
           // Put codeBase in readOnly
           this.cm.doc.markText(endOfLastMatch, startOfMatch, {
-            className: "code-base"
+            className: "code-base",
+            readOnly: true
           });
 
           endOfLastMatch = setEmptyTag(startOfMatch, endOfMatch, res[1]);
@@ -71,7 +108,8 @@
       });
       // ReadOnly from last match to the end of the doc
       this.cm.doc.markText(endOfLastMatch, getDocBoundaries(this.cm.doc).end, {
-        className: "code-base"
+        className: "code-base",
+        readOnly: true
       });
 
       // Return the marker of the tag that is left by the currsor.
@@ -119,130 +157,42 @@
       this.cm.on("cursorActivity", cm => {
         let cursorPos = cm.doc.getCursor();
         let markersAtCursor = cm.doc.findMarksAt(cursorPos);
-        const emptyTagReplacement = "  ";
 
         for (let marker of markersAtCursor) {
           if (marker.className == "tag-empty") {
             let markerPos = marker.find();
 
             cm.doc.replaceRange(
-              emptyTagReplacement,
+              "",
               markerPos.from,
-              markerPos.to
+              markerPos.to,
+              "pythia-remove-empty-tag"
             );
 
-            let newTagMiddlePos = {
-              line: markerPos.from.line,
-              ch: markerPos.from.ch + Math.floor(emptyTagReplacement.length / 2)
-            };
-
-            cm.doc.markText(
-              { ...markerPos.from, ch: markerPos.from.ch },
-              newTagMiddlePos,
-              {
-                className: "b-tag"
-              }
-            );
-
-            cm.doc.markText(
-              newTagMiddlePos,
-              {
-                ...newTagMiddlePos,
-                ch: markerPos.from.ch + emptyTagReplacement.length
-              },
-              { className: "b-tag" }
-            );
-
-            cm.doc.setCursor(newTagMiddlePos);
-
-            this.cm.doc.markText(
-              markerPos.from,
-              {
-                line: markerPos.from.line,
-                ch: markerPos.from.ch + emptyTagReplacement.length
-              },
-              {
-                className: "tag",
-                attributes: { "data-name": marker.attributes["data-name"] }
-              }
-            );
+            this.cm.doc.markText(markerPos.from, markerPos.from, {
+              className: "tag",
+              attributes: { "data-name": marker.attributes["data-name"] },
+              inclusiveLeft: true,
+              inclusiveRight: true,
+              clearWhenEmpty: false
+            });
           }
         }
       });
 
       // Prevent editing first and last position of the doc
       this.cm.on("beforeChange", (cm, change) => {
-        if (!change.origin) return;
-        let tagsNames = cm.doc
-          .findMarks(change.from, change.to)
-          .map(m => m.className);
-        if (change.text[0] != "") {
-          if (!tagsNames.find(m => m == "tag")) {
-            let tagToMod = cm.doc
-              .findMarks(
-                { ...change.from, ch: change.from.ch - 1 },
-                { ...change.to, ch: change.to.ch + 1 }
-              )
-              .find(m => m.className == "tag");
-
-            if (tagToMod) {
-              let tagToModPos = tagToMod.find();
-              let currentText = cm.doc.getRange(tagToModPos.from, tagToModPos.to);
-              let cursorPos = cm.doc.getCursor();
-
-              let newText;
-
-              if (change.to.ch <= tagToModPos.from.ch) {
-                newText = change.text.join("") + currentText;
-              } else if (change.from.ch >= tagToModPos.to.ch) {
-                newText = currentText + change.text.join("");
-              } else {
-                return;
-              }
-              cm.doc.replaceRange(newText, tagToModPos.from, tagToModPos.to);
-              cm.doc.markText(
-                tagToModPos.from,
-                {
-                  ...tagToModPos.from,
-                  ch: tagToModPos.from.ch + newText.length
-                },
-                {
-                  attributes: {
-                    "data-name": tagToMod.attributes["data-name"]
-                  },
-                  className: "tag"
-                }
-              );
-
-              cursorPos.ch += change.text.length;
-              cm.doc.setCursor(cursorPos);
-            }
-            change.cancel();
-          }
-        } else {
-          let tagMark = cm.doc
-            .findMarks(change.from, change.to)
-            .find(m => m.className == "tag");
-          if (tagMark) {
-            let tagPos = tagMark.find();
-            if (cm.doc.getRange(tagPos.from, tagPos.to).length <= 1) {
-              setEmptyTag(
-                tagPos.from,
-                tagPos.to,
-                tagMark.attributes["data-name"]
-              );
-            }
-          }
-          if (
-            tagsNames.find(m => m == "b-tag") ||
-            !tagsNames.find(m => m == "tag")
-          ) {
-            change.cancel();
-          }
+        let docBoundaries = getDocBoundaries(cm.doc);
+        if (
+          posEqual(change.to, docBoundaries.start) ||
+          posEqual(change.from, docBoundaries.end)
+        ) {
+          change.cancel();
         }
       });
 
-      this.cm.on("change", (cm, change) => {
+      // update the value input
+      this.cm.on("change", cm => {
         let allMarks = cm.doc.getAllMarks();
         let tagMarks = allMarks.filter(m => m.className == "tag");
         let emptyTag = allMarks.filter(m => m.className == "tag-empty");
@@ -255,22 +205,42 @@
           );
         }
         for (let mark of emptyTag) {
-          Vue.set(
-            this.value.input,
-            mark.attributes["data-name"],
-            ""
-          );
+          Vue.set(this.value.input, mark.attributes["data-name"], "");
         }
         this.$emit("input", this.value);
-        if (!change.origin) return;
-        if (change.text[0] != "") {
-          let bTags = allMarks.filter(m => m.className == "b-tag");
-          for (let bTag of bTags) {
+      });
+
+      // handles the b-tags
+      this.cm.on("change", (cm, change) => {
+        const rejectOrigin = ["pythia-remove-space", "pythia-set-one-space"];
+        if (rejectOrigin.indexOf(change.origin) > -1) return;
+
+        let editedMarks = cm.doc.findMarksAt(change.from);
+        let foundTag = editedMarks.find(m => m.className == "tag");
+        if (!foundTag) return;
+
+        let tagPos = foundTag.find();
+        let tagContent = cm.doc.getRange(tagPos.from, tagPos.to);
+        if (tagContent.length > 0) {
+          let bTagsToRemove = cm.doc
+            .findMarks(
+              { ...tagPos.from, ch: tagPos.from - 1 },
+              { ...tagPos.to, ch: tagPos.to + 1 }
+            )
+            .filter(m => m.className == "b-tag");
+          for (let bTag of bTagsToRemove) {
             let bTagPos = bTag.find();
             bTag.readOnly = false;
-            cm.doc.replaceRange("", bTagPos.from, bTagPos.to);
+            cm.doc.replaceRange(
+              "",
+              bTagPos.from,
+              bTagPos.to,
+              "pythia-remove-space"
+            );
             bTag.readOnly = true;
           }
+        } else {
+          setBlankTags(cm, foundTag);
         }
       });
     }
@@ -278,6 +248,7 @@
 </script>
 <style>
   .tag,
+  .b-tag,
   .tag-empty {
     background: #ffffff1c;
   }
