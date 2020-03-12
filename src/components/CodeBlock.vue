@@ -17,7 +17,7 @@
     mounted() {
       const regex = /@[^@]*@([\w-]+)@[^@]*@/;
 
-      let setEmptyTag = (from, to, name) => {
+      let setEmptyTag = (from, to, name, init = false) => {
         const emptyTag = "\u22c5\u22c5\u22c5";
         // Replace the tag with the ...
         this.cm.doc.replaceRange(emptyTag, from, to, "pythia-set-empty");
@@ -29,6 +29,15 @@
           className: "tag-empty",
           attributes: { "data-name": name }
         });
+        if (init) {
+          this.cm.doc.markText(from, endOfEmptyTag, {
+            className: "tag",
+            attributes: { "data-name": name },
+            inclusiveLeft: true,
+            inclusiveRight: true,
+            clearWhenEmpty: false
+          });
+        }
         return endOfEmptyTag;
       };
 
@@ -103,7 +112,7 @@
             readOnly: true
           });
 
-          endOfLastMatch = setEmptyTag(startOfMatch, endOfMatch, res[1]);
+          endOfLastMatch = setEmptyTag(startOfMatch, endOfMatch, res[1], true);
         }
       });
       // ReadOnly from last match to the end of the doc
@@ -131,7 +140,7 @@
 
           if (
             !tagsMarkersIdAtCursor.find(x => x == marker.id) &&
-            doc.getRange(tagPos.from, tagPos.to).trim() == ""
+            doc.getRange(tagPos.from, tagPos.to) == "  "
           ) {
             return marker;
           }
@@ -168,14 +177,6 @@
               markerPos.to,
               "pythia-remove-empty-tag"
             );
-
-            this.cm.doc.markText(markerPos.from, markerPos.from, {
-              className: "tag",
-              attributes: { "data-name": marker.attributes["data-name"] },
-              inclusiveLeft: true,
-              inclusiveRight: true,
-              clearWhenEmpty: false
-            });
           }
         }
       });
