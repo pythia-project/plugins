@@ -152,7 +152,7 @@ describe('Delete text', () => {
   it('should reset the two spaces when selecting and deleting all the text', () => {
     cy.get('.tag-empty').eq(0).type("aa")
     cy.get('.CodeMirror-code').should('have.text', '1while aa \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
-    cy.get('.tag').type('{backspace}')
+    cy.get('.tag').eq(0).type('{backspace}')
     cy.get('.CodeMirror-code').should('have.text', '1while    \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
     cy.get('.tag-empty').should('have.length', 2)
     cy.get('.b-tag').should('have.length', 2)
@@ -160,9 +160,43 @@ describe('Delete text', () => {
 
   it('should have a tag if you select an existing tag and write another text', () => {
     cy.get('.tag-empty').eq(0).type("aa")
-    cy.get('.tag').type('bb')
-    cy.get('.tag').should('have.length', 1)
+    cy.get('.tag').eq(0).type('bb')
     cy.get('.CodeMirror-code').should('have.text', '1while bb \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
   })
+})
 
+describe('Tab to navigate tags', () => {
+  it('should go to the next tags when, when they are all empty, press tab ', () => {
+    cy.get('.tag').eq(0).click()
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5   :2    print("hello \u22c5\u22c5\u22c5")')
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 \u22c5\u22c5\u22c5:2    print("hello   ")')
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while    \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5   :2    print("hello \u22c5\u22c5\u22c5")')
+  })
+
+  it('should keep the text when press tab', () => {
+    cy.get('.tag').eq(0).click()
+    cy.focused().tab({shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5   :2    print("hello \u22c5\u22c5\u22c5")')
+    cy.focused().type("hello").tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 hello:2    print("hello   ")')
+    cy.focused().tab({shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while    hello:2    print("hello \u22c5\u22c5\u22c5")')
+    cy.focused().tab({shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 hello:2    print("hello \u22c5\u22c5\u22c5")')
+
+  })
+
+  it('should navigate to the first tab if no tag is selected', () => {
+    cy.get('.CodeMirror-code').click()
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while    \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
+    cy.focused().tab({ shift: true })
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5   :2    print("hello \u22c5\u22c5\u22c5")')
+
+  })
 })

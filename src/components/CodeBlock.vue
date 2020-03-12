@@ -211,6 +211,25 @@
         this.$emit("input", this.value);
       });
 
+      // Handle tabs
+      this.cm.setOption("extraKeys", {
+        'Shift-Tab': function(cm) {
+          let cursorPos = cm.doc.getCursor()
+          let currentTag = cm.doc
+            .findMarksAt(cursorPos)
+            .find(m => m.className == "tag");
+          
+          let tags = cm.doc.getAllMarks().filter(m => m.className == "tag");
+          let newTagIndex = 0
+          if (currentTag) {
+            let currentTagIndex = tags.indexOf(currentTag);
+            newTagIndex = (currentTagIndex + 1) % tags.length;
+          }
+          let newTagPos = tags[newTagIndex].find();
+          cm.doc.setCursor(newTagPos.to);
+        }
+      });
+
       // handles the b-tags
       this.cm.on("change", (cm, change) => {
         const rejectOrigin = ["pythia-remove-space", "pythia-set-one-space"];
