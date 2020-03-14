@@ -163,6 +163,26 @@ describe('Delete text', () => {
     cy.get('.tag').eq(0).type('bb')
     cy.get('.CodeMirror-code').should('have.text', '1while bb \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
   })
+
+  xit('should delete the text in all the selected tags', () => {
+    cy.get('.CodeMirror-code').first().clear()
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
+
+    cy.get('.tag-empty').eq(0).type("aa")
+    cy.get('.CodeMirror-code').click()
+    cy.focused().clear()  
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
+
+    cy.get('.tag-empty').eq(0).type("aa")
+    cy.get('.tag-empty').eq(1).type("aa")
+    cy.get('.tag-empty').eq(2).type("aa")
+
+    cy.get('.CodeMirror-code').click()
+    cy.focused().clear()  
+    cy.get('.CodeMirror-code').should('have.text', '1while \u22c5\u22c5\u22c5 \u22c5\u22c5\u22c5:2    print("hello \u22c5\u22c5\u22c5")')
+
+
+  })
 })
 
 describe('Tab to navigate tags', () => {

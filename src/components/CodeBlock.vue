@@ -35,7 +35,8 @@
             attributes: { "data-name": name },
             inclusiveLeft: true,
             inclusiveRight: true,
-            clearWhenEmpty: false
+            clearWhenEmpty: false,
+            readOnly: true
           });
         }
         return endOfEmptyTag;
@@ -91,6 +92,15 @@
         return p1.line == p2.line && p1.ch == p2.ch;
       };
 
+      let inRange = ({ from, to }, pos, included = false) => {
+        return (
+          from.line <= pos.line &&
+          pos.line <= to.line &&
+          (included ? from.ch <= pos.ch : from.ch < pos.ch) &&
+          (included ? pos.ch <= to.ch : pos.ch < to.ch)
+        );
+      };
+
       let endOfLastMatch = getDocBoundaries(this.cm.doc).start;
       this.cm.doc.eachLine(line => {
         for (let res of this.cm
@@ -121,74 +131,77 @@
         readOnly: true
       });
 
-      // Return the marker of the tag that is left by the currsor.
-      // It doesn't return anything if the cursor is still on the tag or was not on a tag
-      let leftTag = doc => {
-        let cursorPos = doc.getCursor();
-
-        let tagsMarkersOfDoc = doc
-          .getAllMarks()
-          .filter(m => m.className == "tag");
-
-        for (let marker of tagsMarkersOfDoc) {
-          let tagsMarkersIdAtCursor = doc
-            .findMarksAt(cursorPos)
-            .filter(m => m.className == "tag")
-            .map(m => m.id);
-
-          let tagPos = marker.find();
-
-          if (
-            !tagsMarkersIdAtCursor.find(x => x == marker.id) &&
-            doc.getRange(tagPos.from, tagPos.to) == "  "
-          ) {
-            return marker;
-          }
-        }
-      };
-
-      // Reset to empty tag when leaving the tag empty
-      this.cm.on("cursorActivity", cm => {
-        let tagMarker = leftTag(cm.doc);
-
-        if (tagMarker) {
-          let tagPos = tagMarker.find();
-          cm.doc
-            .findMarks(tagPos.from, tagPos.to)
-            .filter(m => m.className == "b-tag")
-            .forEach(m => (m.readOnly = false));
-
-          setEmptyTag(tagPos.from, tagPos.to, tagMarker.attributes["data-name"]);
-        }
-      });
-
-      // Remove the empty tag when cursor on it
       this.cm.on("cursorActivity", cm => {
         let cursorPos = cm.doc.getCursor();
-        let markersAtCursor = cm.doc.findMarksAt(cursorPos);
+        let marksAtCursor = cm.doc.findMarksAt(cursorPos).filter(m => {
+          let pos = m.find();
+          return inRange(pos, cursorPos);
+        });
 
-        for (let marker of markersAtCursor) {
-          if (marker.className == "tag-empty") {
-            let markerPos = marker.find();
+        let allTags = cm.doc.getAllMarks().filter(m => m.className == "tag");
+        let tagAtCursor = marksAtCursor.find(m => m.className == "tag");
+        let tagNotAtCursor;
+        if (tagAtCursor) {
+          tagNotAtCursor = allTags.filter(m => m.id != tagAtCursor.id);
+        } else {
+          tagNotAtCursor = allTags;
+        }
+        let tagsToReset = tagNotAtCursor.filter(m => {
+          let pos = m.find();
+          let content = cm.doc.getRange(pos.from, pos.to);
+          return content == "  ";
+        });
 
-            cm.doc.replaceRange(
-              "",
-              markerPos.from,
-              markerPos.to,
-              "pythia-remove-empty-tag"
-            );
+        for (let tag of tagsToReset) {
+          let tagPos = tag.find();
+          let bTagsToRemove = cm.doc
+            .findMarks(tagPos.from, tagPos.to)
+            .filter(m => m.className == "b-tag");
+          for (let bTag of bTagsToRemove) {
+            bTag.readOnly = false;
           }
+          let endOfEmptyTag = setEmptyTag(tagPos.from, tagPos.to, null);
+          if (inRange(tagPos, cursorPos, true)) {
+            if (cursorPos.ch - tagPos.from.ch < endOfEmptyTag.ch - cursorPos.ch) {
+              cm.doc.setCursor(tagPos.from);
+            } else {
+              cm.doc.setCursor(endOfEmptyTag);
+            }
+          }
+          tag.readOnly = true;
+        }
+
+        let emptyTagAtCursor = marksAtCursor.find(
+          m => m.className == "tag-empty"
+        );
+        if (emptyTagAtCursor) {
+          let pos = emptyTagAtCursor.find();
+          tagAtCursor.readOnly = false;
+          cm.doc.replaceRange("", pos.from, pos.to, "pythia-remove-empty-tag");
         }
       });
 
       // Prevent editing first and last position of the doc
       this.cm.on("beforeChange", (cm, change) => {
         let docBoundaries = getDocBoundaries(cm.doc);
+        let tags = cm.doc
+          .findMarks(change.from, change.to)
+          .filter(m => m.className == "tag");
         if (
           posEqual(change.to, docBoundaries.start) ||
-          posEqual(change.from, docBoundaries.end)
+          posEqual(change.from, docBoundaries.end) ||
+          tags.length > 1
         ) {
           change.cancel();
+        }
+
+        if (tags.length > 1 && change.origin == "+delete") {
+          for (let tag of tags) {
+            let pos = tag.find();
+            tag.readOnly = false;
+            setEmptyTag(pos.from, pos.to, null);
+            tag.readOnly = true;
+          }
         }
       });
 
@@ -213,20 +226,25 @@
 
       // Handle tabs
       this.cm.setOption("extraKeys", {
-        'Shift-Tab': function(cm) {
-          let cursorPos = cm.doc.getCursor()
+        "Shift-Tab": function(cm) {
+          let cursorPos = cm.doc.getCursor();
           let currentTag = cm.doc
             .findMarksAt(cursorPos)
             .find(m => m.className == "tag");
-          
+
           let tags = cm.doc.getAllMarks().filter(m => m.className == "tag");
-          let newTagIndex = 0
+          let newTagIndex = 0;
           if (currentTag) {
             let currentTagIndex = tags.indexOf(currentTag);
             newTagIndex = (currentTagIndex + 1) % tags.length;
           }
           let newTagPos = tags[newTagIndex].find();
-          cm.doc.setCursor(newTagPos.to);
+          let emptyTag = cm.doc.findMarksAt(newTagPos.from);
+          if (emptyTag) {
+            cm.doc.setCursor({ ...newTagPos.to, ch: newTagPos.to.ch - 1 });
+          } else {
+            cm.doc.setCursor(newTagPos.to);
+          }
         }
       });
 
@@ -236,17 +254,16 @@
         if (rejectOrigin.indexOf(change.origin) > -1) return;
 
         let editedMarks = cm.doc.findMarksAt(change.from);
+
         let foundTag = editedMarks.find(m => m.className == "tag");
         if (!foundTag) return;
 
         let tagPos = foundTag.find();
         let tagContent = cm.doc.getRange(tagPos.from, tagPos.to);
+
         if (tagContent.length > 0) {
           let bTagsToRemove = cm.doc
-            .findMarks(
-              { ...tagPos.from, ch: tagPos.from - 1 },
-              { ...tagPos.to, ch: tagPos.to + 1 }
-            )
+            .findMarks(tagPos.from, tagPos.to)
             .filter(m => m.className == "b-tag");
           for (let bTag of bTagsToRemove) {
             let bTagPos = bTag.find();
