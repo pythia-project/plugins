@@ -2,12 +2,12 @@
   <b-container class="bv-example-row">
     <b-row>
       <b-col>
-        <CodeBlock v-model="taskInfos" />
+        <CodeBlock v-if="taskInfos" v-model="answer" :infos="taskInfos" />
       </b-col>
     </b-row>
     <b-row>
       <b-col>
-        <b-spinner v-if="executing"/>
+        <b-spinner v-if="executing" />
         <Feedback v-else-if="feedbackData" :data="feedbackData" />
       </b-col>
     </b-row>
@@ -20,75 +20,71 @@
 </template>
 
 <script>
-  import Feedback from "./components/Feedback";
-  export default {
-    name: "App",
-    components: {
-      CodeBlock : () => import('./components/CodeBlock'),
-      Feedback
-    },
-    props: {
-      url: String,
-      tid: String
-    },
-    data: () => ({
-      taskInfos: {
-        type: "",
-        codeBase: 'while @@cond@@ @@another@@:\n\tprint("hello @@world@@")',
-        input: {}
-      },
-      submited: false,
-      feedbackData: null,
-      error: null,
-      executing: false
-    }),
-    methods: {
-      submit() {
-        this.executing = true;
-        fetch(`${this.pythiaUrl}/api/execute`, {
-          method: "POST",
-          body: JSON.stringify({
-            tid: this.tid,
-            input: this.taskInfos.input
-          })
-        })
-          .then(response => {
-            return response.json();
-          })
-          .catch(() => {
-            return {status: "unreachable"}
-          })
-          .then(data => {
-            if(data.output)
-              data.output = JSON.parse(data.output);
-
-            return data;
-          })
-          .then(data => {
-            this.feedbackData = data;
-          })
-      }
-    },
-    watch: {
-      feedbackData() {
-        this.executing = false;
-      }
-    },
-    computed: {
-      pythiaUrl() {
-        return this.url || window.PYTHIA_URL || "http://localhost:8080"
-      }
-    },
-    mounted () {
-      fetch(`${this.pythiaUrl}/api/tasks/${this.tid}`, {
-          method: "GET"
-        })
-      .then(response => {
-        return response.text();
+import Feedback from "./components/Feedback";
+export default {
+  name: "App",
+  components: {
+    CodeBlock: () => import("./components/CodeBlock"),
+    Feedback,
+  },
+  props: {
+    url: String,
+    tid: String,
+  },
+  data: () => ({
+    taskInfos: null,
+    submited: false,
+    feedbackData: null,
+    error: null,
+    executing: false,
+    answer: {}
+  }),
+  methods: {
+    submit() {
+      this.executing = true;
+      fetch(`${this.pythiaUrl}/api/execute`, {
+        method: "POST",
+        body: JSON.stringify({
+          tid: this.tid,
+          input: this.answer,
+        }),
       })
-      .then(data => {
-        console.log(data)
+        .then((response) => {
+          return response.json();
         })
-    }
-  };
+        .catch(() => {
+          return { status: "unreachable" };
+        })
+        .then((data) => {
+          if (data.output) data.output = JSON.parse(data.output);
+
+          return data;
+        })
+        .then((data) => {
+          this.feedbackData = data;
+        });
+    },
+  },
+  watch: {
+    feedbackData() {
+      this.executing = false;
+    },
+  },
+  computed: {
+    pythiaUrl() {
+      return this.url || window.PYTHIA_URL || "http://localhost:3000";
+    },
+  },
+  mounted() {
+    fetch(`${this.pythiaUrl}/api/tasks/${this.tid}`, {
+      method: "GET",
+    })
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+        this.taskInfos = data;
+      });
+  },
+};
 </script>
