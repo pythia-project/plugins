@@ -61,9 +61,10 @@ export default {
           readOnly: true,
         });
 
-        let tagType = "tag"
-        const multiline = this.infos.sourceCode[0].options?.placeholders[res[1]]?.multiline
-        if(multiline) tagType = "tag-multiline"
+        let tagType = "tag";
+        const multiline = this.infos.sourceCode[0].options?.placeholders[res[1]]
+          ?.multiline;
+        if (multiline) tagType = "tag-multiline";
 
         //  Set the placeholderspot
         const tag = this.cm.doc.markText(startOfMatch, startOfMatch, {
@@ -161,7 +162,9 @@ export default {
         fullTag = { ...fullTag, ...fullTag.find() };
 
         const marksInRange = cm.findMarks(fullTag.from, fullTag.to);
-        const tag = marksInRange.find((m) => m.className === "tag" || m.className === "tag-multiline");
+        const tag = marksInRange.find(
+          (m) => m.className === "tag" || m.className === "tag-multiline"
+        );
 
         const tagName = tag.attributes.name;
         const content = getMarkContent(cm, tag);
@@ -236,6 +239,16 @@ export default {
       setBlinkCaret(cm, to);
     });
 
+    this.cm.on("tagLeave", (cm, tag) => {
+      const { to } = tag.marker.find();
+      cm.doc
+        .findMarksAt(to)
+        .filter((m) => m.type === "bookmark")
+        .find((m) => m.replacedWith.className === "insert-caret")
+        ?.clear();
+      document.getElementById("insert-caret-style")?.remove();
+    });
+
     this.cm.on("tagContentChange", (cm, tag) => {
       const { to } = tag.marker.find();
       if (tag.content.length === 0) {
@@ -258,7 +271,11 @@ export default {
           .findMarksAt(cursorPos)
           .find((m) => m.className == "tag" || m.className == "tag-multiline");
 
-        let tags = cm.doc.getAllMarks().filter((m) => m.className == "tag"  || m.className == "tag-multiline");
+        let tags = cm.doc
+          .getAllMarks()
+          .filter(
+            (m) => m.className == "tag" || m.className == "tag-multiline"
+          );
         let newTagIndex = 0;
         if (currentTag) {
           let currentTagIndex = tags.indexOf(currentTag);
