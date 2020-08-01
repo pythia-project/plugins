@@ -2,86 +2,9 @@
   // CommonJS
   mod(require("codemirror"));
 })(function(CodeMirror) {
-  CodeMirror.defineOption("editableAreas", false, function(
-    cm,
-    { regex, tagsInfos },
-    old
-  ) {
-    let tags = {};
-    let isFirstBlock = true;
-    let endOfLastTag = getDocBoundaries(cm.doc).start;
+  let tags = {};
 
-    console.log(regex);
-    console.log(tagsInfos);
-
-    cm.doc.eachLine((line) => {
-      const lineMatches = cm
-        .lineInfo(line)
-        .text.matchAll(new RegExp(regex, "g"));
-
-      for (let res of lineMatches) {
-        // The line is changed later on in the loop so we need to get each time the line infos
-        let lineInfo = cm.lineInfo(line);
-        let startOfMatch = {
-          line: lineInfo.line,
-          ch: lineInfo.text.indexOf(res[0]),
-        };
-        let endOfMatch = {
-          ...startOfMatch,
-          ch: startOfMatch.ch + res[0].length,
-        };
-
-        // Replace the mark with two space. Each space will be called a blank
-        cm.doc.replaceRange("", startOfMatch, endOfMatch, "remove-marker");
-
-        // Put codeBase with left blank in readOnly
-        cm.doc.markText(endOfLastTag, startOfMatch, {
-          className: "code-base",
-          inclusiveLeft: isFirstBlock,
-          inclusiveRight: false,
-          readOnly: true,
-        });
-
-        let tagType = "tag";
-        const multiline = tagsInfos[res[1]]?.multiline;
-        if (multiline) tagType = "tag-multiline";
-
-        //  Set the placeholderspot
-        const tag = cm.doc.markText(startOfMatch, startOfMatch, {
-          className: tagType,
-          attributes: { name: res[1] },
-          inclusiveLeft: true,
-          inclusiveRight: true,
-          clearWhenEmpty: false,
-          readOnly: false,
-        });
-
-        tags[res[1]] = {
-          marker: tag,
-          content: "",
-          cursorIn: false,
-          multiline: multiline,
-        };
-
-        isFirstBlock = false;
-
-        setEmptyTag(cm, startOfMatch);
-
-        endOfLastTag = startOfMatch;
-      }
-    });
-
-    // ReadOnly from last match to the end of the doc
-    cm.doc.markText(endOfLastTag, getDocBoundaries(cm.doc).end, {
-      className: "code-base",
-      inclusiveLeft: false,
-      inclusiveRight: true,
-      readOnly: true,
-    });
-
-    // Remove the deletion of the markers from the history.
-    cm.doc.clearHistory();
-
+  CodeMirror.defineOption("editableAreas", false, function(cm, val, old) {
     if (old == CodeMirror.Init) {
       //
       // Empty tag handeling
@@ -163,6 +86,7 @@
     } else {
       cm.off("changes", onChnages);
       cm.off("cursorActivity", onCursorActivity);
+      cm.off("change", setup);
     }
 
     /*
@@ -171,46 +95,88 @@
      *
      */
 
+    cm.on("change", setup);
     cm.on("changes", onChnages);
     cm.on("cursorActivity", onCursorActivity);
-
-    // Emit a singal when a tag changed
-    function onChnages(cm) {
-      for (const tagName in tags) {
-        const tag = tags[tagName];
-        const { from, to } = tag.marker.find();
-        const newContent = cm.doc.getRange(from, to);
-        if (tag.content !== newContent) {
-          tag.content = newContent;
-          CodeMirror.signal(cm, "tagContentChange", cm, {
-            ...tag,
-            name: tagName,
-          });
-        }
-      }
-    }
-
-    // Emit a signal when the cursor enter or leaves a tag
-    function onCursorActivity(cm) {
-      if (cm.doc.somethingSelected()) return;
-      const cursorPos = cm.doc.getCursor();
-
-      for (const tagName in tags) {
-        const tag = tags[tagName];
-
-        if (inRange(tag.marker.find(), cursorPos, true) && !tag.cursorIn) {
-          tag.cursorIn = true;
-          CodeMirror.signal(cm, "tagEnter", cm, tag);
-        } else if (
-          !inRange(tag.marker.find(), cursorPos, true) &&
-          tag.cursorIn
-        ) {
-          tag.cursorIn = false;
-          CodeMirror.signal(cm, "tagLeave", cm, tag);
-        }
-      }
-    }
   });
+
+  function setup(cm, change) {
+    if (change.origin !== "setValue") return;
+
+    cm.getAllMarks().forEach((m) => m.clear());
+
+    tags = {};
+    let isFirstBlock = true;
+    let endOfLastTag = getDocBoundaries(cm.doc).start;
+    const { regex, tagsInfos } = cm.options.editableAreas;
+    cm.doc.eachLine((line) => {
+      const lineMatches = cm
+        .lineInfo(line)
+        .text.matchAll(new RegExp(regex, "g"));
+
+      for (let res of lineMatches) {
+        // The line is changed later on in the loop so we need to get each time the line infos
+        let lineInfo = cm.lineInfo(line);
+        let startOfMatch = {
+          line: lineInfo.line,
+          ch: lineInfo.text.indexOf(res[0]),
+        };
+        let endOfMatch = {
+          ...startOfMatch,
+          ch: startOfMatch.ch + res[0].length,
+        };
+
+        // Replace the mark with two space. Each space will be called a blank
+        cm.doc.replaceRange("", startOfMatch, endOfMatch, "remove-marker");
+
+        // Put codeBase with left blank in readOnly
+        cm.doc.markText(endOfLastTag, startOfMatch, {
+          className: "code-base",
+          inclusiveLeft: isFirstBlock,
+          inclusiveRight: false,
+          readOnly: true,
+        });
+
+        let tagType = "tag";
+        const multiline = tagsInfos ? tagsInfos[res[1]]?.multiline : false;
+        if (multiline) tagType = "tag-multiline";
+
+        //  Set the placeholderspot
+        const tag = cm.doc.markText(startOfMatch, startOfMatch, {
+          className: tagType,
+          attributes: { name: res[1] },
+          inclusiveLeft: true,
+          inclusiveRight: true,
+          clearWhenEmpty: false,
+          readOnly: false,
+        });
+
+        tags[res[1]] = {
+          marker: tag,
+          content: "",
+          cursorIn: false,
+          multiline: multiline,
+        };
+
+        isFirstBlock = false;
+
+        setEmptyTag(cm, startOfMatch);
+
+        endOfLastTag = startOfMatch;
+      }
+    });
+
+    // ReadOnly from last match to the end of the doc
+    cm.doc.markText(endOfLastTag, getDocBoundaries(cm.doc).end, {
+      className: "code-base",
+      inclusiveLeft: false,
+      inclusiveRight: true,
+      readOnly: true,
+    });
+
+    // Remove the deletion of the markers from the history.
+    cm.doc.clearHistory();
+  }
 
   /*
    *
@@ -383,5 +349,39 @@
       (included ? from.ch <= pos.ch : from.ch < pos.ch) &&
       (included ? pos.ch <= to.ch : pos.ch < to.ch)
     );
+  }
+
+  // Emit a singal when a tag changed
+  function onChnages(cm) {
+    for (const tagName in tags) {
+      const tag = tags[tagName];
+      const { from, to } = tag.marker.find();
+      const newContent = cm.doc.getRange(from, to);
+      if (tag.content !== newContent) {
+        tag.content = newContent;
+        CodeMirror.signal(cm, "tagContentChange", cm, {
+          ...tag,
+          name: tagName,
+        });
+      }
+    }
+  }
+
+  // Emit a signal when the cursor enter or leaves a tag
+  function onCursorActivity(cm) {
+    if (cm.doc.somethingSelected()) return;
+    const cursorPos = cm.doc.getCursor();
+
+    for (const tagName in tags) {
+      const tag = tags[tagName];
+
+      if (inRange(tag.marker.find(), cursorPos, true) && !tag.cursorIn) {
+        tag.cursorIn = true;
+        CodeMirror.signal(cm, "tagEnter", cm, tag);
+      } else if (!inRange(tag.marker.find(), cursorPos, true) && tag.cursorIn) {
+        tag.cursorIn = false;
+        CodeMirror.signal(cm, "tagLeave", cm, tag);
+      }
+    }
   }
 });

@@ -1,7 +1,7 @@
 <template>
   <codemirror
     ref="codemirror"
-    :value="infos.sourceCode[0].template"
+    :value="code"
     :options="cmOptions"
   ></codemirror>
 </template>
@@ -13,8 +13,9 @@ export default {
     infos: Object,
     value: Object,
   },
-  data: () => ({
+  data: (vm) => ({
     cmOptions: {},
+    code: vm.infos.sourceCode[0].template
   }),
   computed: {
     cm() {
@@ -28,7 +29,7 @@ export default {
         tagsInfos: this.infos.sourceCode[0].options.tags,
       },
     };
-
+    
     // Emit to input the updated values of the tag
     this.cm.on("tagContentChange", (cm, tag) => {
       this.$emit("input", { ...this.value, [tag.name]: tag.content });
