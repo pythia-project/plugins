@@ -126,6 +126,7 @@ export default {
 
     // Emit a signal when the cursor enter or leaves a tag
     this.cm.on("cursorActivity", (cm) => {
+      if(cm.doc.somethingSelected()) return;
       const cursorPos = cm.doc.getCursor();
 
       for (const tagName in tags) {
