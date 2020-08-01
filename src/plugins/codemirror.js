@@ -1,15 +1,18 @@
-import Vue from 'vue'
-import VueCodeMirror from 'vue-codemirror';
-import CodeMirror from 'codemirror';
-Vue.use(VueCodeMirror, {});
-import 'codemirror/lib/codemirror.css';
-import 'codemirror/keymap/sublime';
-import 'codemirror/mode/python/python.js';
-import 'codemirror/theme/monokai.css';
+import Vue from "vue";
+import VueCodeMirror from "vue-codemirror";
 
-
-CodeMirror.defaults.tabSize = 4;
-CodeMirror.defaults.styleActiveLine = true;
-CodeMirror.defaults.lineNumbers = true;
-CodeMirror.defaults.matchBrackets = true;
-CodeMirror.defaults.theme = "monokai";
+Vue.use(VueCodeMirror, {
+  options: {
+    tabSize: 4,
+    styleActiveLine: true,
+    lineNumbers: true,
+    matchBrackets: true,
+    theme: "monokai",
+    editableAreas: { regex: /@[^@]*@([\w-]+)@[^@]*@/ },
+  },
+});
+import "codemirror/lib/codemirror.css";
+import "codemirror/keymap/sublime";
+import "codemirror/mode/python/python.js";
+import "codemirror/theme/monokai.css";
+import "./editable-area.js";
