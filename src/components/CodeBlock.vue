@@ -264,6 +264,26 @@ export default {
       }
     });
 
+    // Prevent new lines in non-multiline tags
+    this.cm.on("beforeChange", (cm, change) => {
+      if (change.origin === "undo" || change.origin === "redo") return;
+      // Get the first tag marker in the change range.
+      // That is where the changes will be applied
+      const markers = [
+        ...cm.doc.findMarks(change.from, change.to),
+        ...cm.doc.findMarksAt(change.from),
+        ...cm.doc.findMarksAt(change.to),
+      ];
+
+      const firstTagMarker = markers.find(
+        (m) => m?.className === "tag" || m?.className === "tag-multiline"
+      );
+
+      // We don't need to prevent new line if the first tag is multiline
+      if (firstTagMarker.className === "tag-multiline") return;
+      change.update(change.from, change.to, change.text.slice(0, 1));
+    });
+
     // Handle alt-tab to navigate between tags
     this.cm.addKeyMap({
       "Alt-Tab": function(cm) {
