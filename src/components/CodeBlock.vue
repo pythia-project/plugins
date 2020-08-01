@@ -119,7 +119,7 @@ export default {
         const newContent = cm.doc.getRange(from, to);
         if (tag.content !== newContent) {
           tag.content = newContent;
-          CodeMirror.signal(cm, "tagContentChange", cm, tag);
+          CodeMirror.signal(cm, "tagContentChange", cm, {...tag, name: tagName});
         }
       }
     });
@@ -283,6 +283,11 @@ export default {
       if (firstTagMarker.className === "tag-multiline") return;
       change.update(change.from, change.to, change.text.slice(0, 1));
     });
+
+    // Emit to input the updated values of the tag
+    this.cm.on("tagContentChange", (cm, tag) => {
+      this.$emit("input", {...this.value, [tag.name]: tag.content})
+    })
 
     // Handle alt-tab to navigate between tags
     this.cm.addKeyMap({
