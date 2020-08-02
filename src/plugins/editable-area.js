@@ -86,7 +86,7 @@
     } else {
       cm.off("changes", onChnages);
       cm.off("cursorActivity", onCursorActivity);
-      cm.off("change", setup);
+      cm.off("change", setupOnChnage);
     }
 
     /*
@@ -95,14 +95,16 @@
      *
      */
 
-    cm.on("change", setup);
+    setup(cm);
+    cm.on("change", setupOnChnage);
     cm.on("changes", onChnages);
     cm.on("cursorActivity", onCursorActivity);
   });
 
-  function setup(cm, change) {
+  function setupOnChnage(cm, change) {
     if (change.origin !== "setValue") return;
-
+  }
+  function setup(cm) {
     cm.getAllMarks().forEach((m) => m.clear());
 
     tags = {};
@@ -188,8 +190,15 @@
   function setEmptyTagOnChanged(cm, tag) {
     const tagPos = tag.marker.find();
     const cursorPos = cm.doc.getCursor();
-    if (tag.content.length === 0 && !inRange(tagPos, cursorPos, true)) {
-      setEmptyTag(cm, tagPos.to);
+    if (tag.content.length === 0) {
+      if (!inRange(tagPos, cursorPos, true) || cm.doc.somethingSelected())
+        setEmptyTag(cm, tagPos.to);
+    } else {
+      cm.doc
+        .findMarksAt(tagPos.from)
+        .filter((m) => m.type === "bookmark")
+        .find((m) => m.replacedWith?.className === "tag-empty")
+        ?.clear();
     }
   }
 
@@ -208,9 +217,14 @@
 
   // Add an empty tag when leaving an empty tag
   function setEmptyTagOnLeave(cm, tag) {
-    if (tag.content.length > 0) return;
-
     const tagPos = tag.marker.find();
+    const emptyTagAtCursor = cm.doc
+      .findMarksAt(tagPos.from)
+      .filter((m) => m.type === "bookmark")
+      .find((m) => m.replacedWith?.className === "tag-empty");
+
+    if (tag.content.length > 0 || emptyTagAtCursor) return;
+
     setEmptyTag(cm, tagPos.from);
   }
 
@@ -264,12 +278,14 @@
   // Remove insert caret style when a content is set in the tag
   // Set insert caret style when tag is emptied
   function insertCaretOnChange(cm, tag) {
-    const { to } = tag.marker.find();
+    const tagPos = tag.marker.find();
     if (tag.content.length === 0) {
-      setBlinkCaret(cm, to);
+      const cursorPos = cm.doc.getCursor();
+      if (inRange(tagPos, cursorPos, true) && !cm.doc.somethingSelected())
+        setBlinkCaret(cm, tagPos.to);
     } else {
       cm.doc
-        .findMarksAt(to)
+        .findMarksAt(tagPos.to)
         .filter((m) => m.type === "bookmark")
         .find((m) => m.replacedWith.className === "insert-caret")
         ?.clear();
