@@ -1,0 +1,12 @@
+{
+  "sourceCode": [
+    {
+      "template": "while @@cond@@ @@another@@:\n\tprint(\"hello @@world@@\")\n@@body@@",
+      "language": "python",
+      "options": {
+        "tags": { "body": { "multiline": true } }
+      }
+    }
+  ],
+  "type": "input-output"
+}
