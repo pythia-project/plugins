@@ -52,35 +52,10 @@
       // Handle alt-tab to navigate between tags
       cm.addKeyMap({
         "Alt-Tab": function(cm) {
-          let cursorPos = cm.doc.getCursor();
-          let currentTag = cm.doc
-            .findMarksAt(cursorPos)
-            .find(
-              (m) => m.className == "tag" || m.className == "tag-multiline"
-            );
-
-          let tags = cm.doc
-            .getAllMarks()
-            .filter(
-              (m) => m.className == "tag" || m.className == "tag-multiline"
-            );
-
-          if (tags.length === 0) return;
-
-          let newTagIndex = 0;
-          if (currentTag) {
-            let currentTagIndex = tags.indexOf(currentTag);
-            newTagIndex = (currentTagIndex + 1) % tags.length;
-          }
-          let newTagPos = tags[newTagIndex].find();
-          let emptyTag = cm.doc
-            .findMarksAt(newTagPos.from)
-            .find((m) => m.className == "tag-empty");
-          if (emptyTag) {
-            cm.doc.setCursor({ ...newTagPos.to, ch: newTagPos.to.ch - 1 });
-          } else {
-            cm.doc.setCursor(newTagPos.to);
-          }
+          navigateTags(cm, true);
+        },
+        "Shift-Tab": function(cm) {
+          navigateTags(cm, false);
         },
       });
     } else {
@@ -398,6 +373,39 @@
         tag.cursorIn = false;
         CodeMirror.signal(cm, "tagLeave", cm, tag);
       }
+    }
+  }
+
+  // Navigate backward and forward through the tags
+  function navigateTags(cm, forward) {
+    let cursorPos = cm.doc.getCursor();
+    let currentTag = cm.doc
+      .findMarksAt(cursorPos)
+      .find((m) => m.className == "tag" || m.className == "tag-multiline");
+
+    let tags = cm.doc
+      .getAllMarks()
+      .filter((m) => m.className == "tag" || m.className == "tag-multiline");
+
+    if (tags.length === 0) return;
+
+    let newTagIndex = forward ? 0 : tags.length - 1;
+
+    if (currentTag) {
+      const shiftValue = forward ? 1 : -1;
+      const inverterValue = forward ? 0 : tags.length
+      let currentTagIndex = tags.indexOf(currentTag);
+      newTagIndex = (currentTagIndex + shiftValue + inverterValue) % tags.length;
+    }
+
+    let newTagPos = tags[newTagIndex].find();
+    let emptyTag = cm.doc
+      .findMarksAt(newTagPos.from)
+      .find((m) => m.className == "tag-empty");
+    if (emptyTag) {
+      cm.doc.setCursor({ ...newTagPos.to, ch: newTagPos.to.ch - 1 });
+    } else {
+      cm.doc.setCursor(newTagPos.to);
     }
   }
 });
