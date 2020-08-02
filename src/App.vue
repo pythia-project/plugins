@@ -21,6 +21,7 @@
 
 <script>
 import Feedback from "./components/Feedback";
+import axios from "axios"
 export default {
   name: "App",
   components: {
@@ -76,14 +77,9 @@ export default {
     },
   },
   mounted() {
-    fetch(`${this.pythiaUrl}/api/tasks/${this.tid}`, {
-      method: "GET",
-    })
+    axios.get(`${this.pythiaUrl}/api/tasks/${this.tid}`)
       .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        this.taskInfos = data;
+        this.taskInfos = response.data;
       });
   },
 };
