@@ -61,6 +61,7 @@
     } else {
       cm.off("changes", onChnages);
       cm.off("cursorActivity", onCursorActivity);
+      cm.off("focus", onCursorActivity)
       cm.off("change", setupOnChnage);
     }
 
@@ -74,6 +75,8 @@
     cm.on("change", setupOnChnage);
     cm.on("changes", onChnages);
     cm.on("cursorActivity", onCursorActivity);
+    cm.on("focus", onCursorActivity)
+
   });
 
   function setupOnChnage(cm, change) {
@@ -355,7 +358,7 @@
   }
 
   function posEqual(p1, p2) {
-    return p1.line === p2.line && p1.ch === p2.ch
+    return p1.line === p2.line && p1.ch === p2.ch;
   }
 
   // Emit a singal when a tag changed
