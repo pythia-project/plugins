@@ -2,13 +2,13 @@
   <b-container class="bv-example-row">
     <b-row>
       <b-col>
-        <CodeBlock v-model="taskInput" />
+        <CodeBlock v-model="answer" />
       </b-col>
     </b-row>
     <b-row>
       <b-col>
         <b-spinner v-if="executing"/>
-        <Feedback v-else-if="feedbackData" :data="feedbackData" />
+        <Feedback v-else-if="feedbackData" :data="feedbackData" :taskInfos="taskInfos" />
       </b-col>
     </b-row>
     <b-row>
@@ -21,6 +21,7 @@
 
 <script>
   import Feedback from "./components/Feedback";
+  import axios from "axios"
   export default {
     name: "App",
     components: {
@@ -34,22 +35,26 @@
     data: () => ({
       submited: false,
       feedbackData: null,
-      taskInput: 'print("Hello World!", end="")',
       error: null,
-      executing: false
+      executing: false,
+      answer: {},
+      taskInfos: {}
     }),
     methods: {
       submit() {
         this.executing = true;
-        fetch(`${this.pythiaUrl}/api/execute`, {
-          method: "POST",
-          body: JSON.stringify({
+        console.log(JSON.stringify({
             tid: this.tid,
-            input: this.taskInput
+            input: {fields: this.answer}
+          }))
+          axios.post(`${this.pythiaUrl}/api/execute`, {
+            
+            tid: this.tid,
+            input: JSON.stringify({fields: this.answer}),
+          
           })
-        })
           .then(response => {
-            return response.json();
+            return response.data;
           })
           .catch(() => {
             return {status: "unreachable"}
@@ -61,6 +66,7 @@
             return data;
           })
           .then(data => {
+            console.log(data)
             this.feedbackData = data;
           })
       }
@@ -74,6 +80,9 @@
       pythiaUrl() {
         return this.url || window.PYTHIA_URL || "http://localhost:8080"
       }
+    },
+    mounted(){
+      this.taskInfos = {specs: {name: "sub"}}
     }
   };
 </script>

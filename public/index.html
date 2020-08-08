@@ -11,13 +11,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
     <script>
       // Set the following variable if you want to use a custom Pythia server.
-      // var PYTHIA_URL = "http://<pythia_server_url>";
+      var PYTHIA_URL = "http://192.168.1.62:8080";
     </script>
   </head>
   <body>
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <pythia-task-executor tid="execute-python"></pythia-task-executor>
+    <pythia-task-executor tid="test-python-no-predefined"></pythia-task-executor>
   </body>
 </html>
