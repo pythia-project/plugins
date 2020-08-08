@@ -61,7 +61,7 @@
     } else {
       cm.off("changes", onChnages);
       cm.off("cursorActivity", onCursorActivity);
-      cm.off("focus", onCursorActivity)
+      cm.off("focus", onCursorActivity);
       cm.off("change", setupOnChnage);
     }
 
@@ -75,8 +75,7 @@
     cm.on("change", setupOnChnage);
     cm.on("changes", onChnages);
     cm.on("cursorActivity", onCursorActivity);
-    cm.on("focus", onCursorActivity)
-
+    cm.on("focus", onCursorActivity);
   });
 
   function setupOnChnage(cm, change) {
@@ -106,6 +105,18 @@
           ch: startOfMatch.ch + res[0].length,
         };
 
+        // TODO: Give more infos on the error
+        if (res[1] in tags) {
+          CodeMirror.signal(cm, "configurationError");
+          return;
+        } else if (!isFirstBlock && posEqual(endOfLastTag, startOfMatch)) {
+          CodeMirror.signal(cm, "configurationError");
+          return;
+        } else if (multiline && cm.doc.getLine(startOfMatch.line) !== res[0]) {
+          CodeMirror.signal(cm, "configurationError");
+          return;
+        }
+
         // Replace the mark with two space. Each space will be called a blank
         cm.doc.replaceRange("", startOfMatch, endOfMatch, "remove-marker");
 
@@ -130,17 +141,6 @@
           clearWhenEmpty: false,
           readOnly: false,
         });
-
-        // TODO: Give more infos on the error
-        if (res[1] in tags) {
-          CodeMirror.signal(cm, "configurationError");
-          cm.setValue("");
-          return;
-        } else if (!isFirstBlock && posEqual(endOfLastTag, startOfMatch)) {
-          CodeMirror.signal(cm, "configurationError");
-          cm.setValue("");
-          return;
-        }
 
         tags[res[1]] = {
           marker: tag,
