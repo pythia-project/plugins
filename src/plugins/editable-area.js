@@ -128,7 +128,12 @@
           readOnly: false,
         });
 
+        // TODO: Give more infos on the error
         if (res[1] in tags) {
+          CodeMirror.signal(cm, "configurationError");
+          cm.setValue("");
+          return;
+        } else if (!isFirstBlock && posEqual(endOfLastTag, startOfMatch)) {
           CodeMirror.signal(cm, "configurationError");
           cm.setValue("");
           return;
@@ -347,6 +352,10 @@
       (included ? from.ch <= pos.ch : from.ch < pos.ch) &&
       (included ? pos.ch <= to.ch : pos.ch < to.ch)
     );
+  }
+
+  function posEqual(p1, p2) {
+    return p1.line === p2.line && p1.ch === p2.ch
   }
 
   // Emit a singal when a tag changed
