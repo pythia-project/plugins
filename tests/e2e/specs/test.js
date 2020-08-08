@@ -1,3 +1,18 @@
+// Copyright 2020 The Pythia Authors.
+// This file is part of Pythia.
+//
+// Pythia is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3 of the License.
+//
+// Pythia is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+
 // https://docs.cypress.io/api/introduction/api.html
 
 beforeEach(function() {
@@ -62,7 +77,7 @@ describe("EmptyTags", () => {
     .click()
     cy.get(".tag-empty").should("have.length", 1);
     cy.get("#insert-caret-style").should("have.length", 1);
-    
+
 
   });
 
@@ -388,7 +403,7 @@ describe("Multiline handeling", () => {
     cy.visit('/')
 
     cy.get(".tag-empty").first().click()
-    
+
     cy.focused().type("this is line 1{enter}this is line two")
     cy.get(".CodeMirror-code").should(
       "have.text",
@@ -428,7 +443,7 @@ describe("Edit tag from a selection", () => {
     cy.visit('/')
     cy.get(":nth-child(1) > .CodeMirror-line").click({ position: "left" });
     cy.focused().type("{shift}{rightarrow}{rightarrow}{rightarrow}{rightarrow}{rightarrow}{rightarrow}{rightarrow}").type("hello")
-    
+
     cy.get(".CodeMirror-code").should("have.text", "1while hello:")
   })
 
