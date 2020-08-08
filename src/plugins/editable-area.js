@@ -128,6 +128,13 @@
           readOnly: false,
         });
 
+        if(res[1] in tags)
+        {
+          CodeMirror.signal(cm, "configurationError")
+          cm.setValue("")
+          return; 
+        }
+
         tags[res[1]] = {
           marker: tag,
           content: "",

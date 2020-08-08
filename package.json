@@ -29,6 +29,7 @@
     "bootstrap-vue": "^2.15.0",
     "core-js": "^3.6.5",
     "document-register-element": "^1.14.3",
+    "three-dots": "^0.2.0",
     "vue": "^2.6.11",
     "vue-codemirror": "^4.0.5",
     "vue-custom-element": "^3.2.14",

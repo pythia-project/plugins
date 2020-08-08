@@ -1,8 +1,16 @@
 <template>
-  <b-container class="bv-example-row">
+  <b-container>
     <b-row>
       <b-col>
-        <CodeBlock v-if="taskInfos" v-model="answer" :infos="taskInfos" />
+        <CodeBlock
+          v-if="taskInfos && !error"
+          v-model="answer"
+          :infos="taskInfos"
+          @error="onError"
+        />
+        <b-card v-if="!taskInfos">
+          <div class="dot-pulse"></div>
+        </b-card>
       </b-col>
     </b-row>
     <b-row>
@@ -13,7 +21,12 @@
     </b-row>
     <b-row>
       <b-col>
-        <b-button @click="submit" :disabled="executing">Submit</b-button>
+        <b-button
+          v-if="taskInfos && !error"
+          @click="submit"
+          :disabled="executing"
+          >Submit</b-button
+        >
       </b-col>
     </b-row>
   </b-container>
@@ -21,7 +34,7 @@
 
 <script>
 import Feedback from "./components/Feedback";
-import axios from "axios"
+import axios from "axios";
 export default {
   name: "App",
   components: {
@@ -36,9 +49,9 @@ export default {
     taskInfos: null,
     submited: false,
     feedbackData: null,
-    error: null,
+    error: false,
     executing: false,
-    answer: {}
+    answer: {},
   }),
   methods: {
     submit() {
@@ -65,6 +78,10 @@ export default {
           this.feedbackData = data;
         });
     },
+    onError() {
+      this.error = true;
+      this.feedbackData = { status: "configError" };
+    },
   },
   watch: {
     feedbackData() {
@@ -77,10 +94,19 @@ export default {
     },
   },
   mounted() {
-    axios.get(`${this.pythiaUrl}/api/tasks/${this.tid}`)
-      .then((response) => {
-        this.taskInfos = response.data;
-      });
+    axios.get(`${this.pythiaUrl}/api/tasks/${this.tid}`).then((response) => {
+      this.taskInfos = response.data;
+    });
   },
 };
 </script>
+<style lang="scss" scoped>
+$dot-color: grey;
+@import "three-dots/sass/_variables.scss";
+@import "three-dots/sass/_mixins.scss";
+@import "three-dots/sass/_dot-pulse.scss";
+
+.dot-pulse {
+  margin: 15px auto;
+}
+</style>
