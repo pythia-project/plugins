@@ -13,7 +13,7 @@ export default {
     infos: Object,
     value: Object,
   },
-  data: (vm) => ({
+  data: () => ({
     cmOptions: {},
     code: vm.infos.sourceCode[0].template
   }),
@@ -21,12 +21,15 @@ export default {
     cm() {
       return this.$refs.codemirror.codemirror;
     },
+    code(){
+      return this.infos.sourceCode[0].template || ""
+    }
   },
   mounted() {
     this.cmOptions = {
       editableAreas: {
         ...this.cm.options.editableAreas,
-        tagsInfos: this.infos.sourceCode[0].options.tags,
+        tagsInfos: this.infos.sourceCode[0].options?.tags || {},
       },
     };
     
