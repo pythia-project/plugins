@@ -41,6 +41,29 @@ describe("EmptyTags", () => {
       .click();
     cy.get(".tag-empty").should("have.length", 3);
     cy.get("#insert-caret-style").should("have.length", 1);
+
+    cy.get(".tag-empty")
+    .eq(0)
+    .type("hello")
+
+    cy.get(".tag-empty")
+    .eq(0)
+    .click()
+    cy.get(".tag-empty").should("have.length", 2);
+    cy.get("#insert-caret-style").should("have.length", 1);
+
+
+    cy.get(".tag-empty")
+    .eq(1)
+    .type("hello")
+
+    cy.get(".tag-empty")
+    .eq(0)
+    .click()
+    cy.get(".tag-empty").should("have.length", 1);
+    cy.get("#insert-caret-style").should("have.length", 1);
+    
+
   });
 
   it("should swap the ellipse for a space", () => {

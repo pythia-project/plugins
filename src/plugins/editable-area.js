@@ -128,11 +128,10 @@
           readOnly: false,
         });
 
-        if(res[1] in tags)
-        {
-          CodeMirror.signal(cm, "configurationError")
-          cm.setValue("")
-          return; 
+        if (res[1] in tags) {
+          CodeMirror.signal(cm, "configurationError");
+          cm.setValue("");
+          return;
         }
 
         tags[res[1]] = {
@@ -248,6 +247,7 @@
 
   // Remove insert caret style when leaving a tag
   function clearInsertCaretOnLeave(cm, tag) {
+    if (tag.content.length > 0) return;
     const { to } = tag.marker.find();
     cm.doc
       .findMarksAt(to)
@@ -400,9 +400,10 @@
 
     if (currentTag) {
       const shiftValue = forward ? 1 : -1;
-      const inverterValue = forward ? 0 : tags.length
+      const inverterValue = forward ? 0 : tags.length;
       let currentTagIndex = tags.indexOf(currentTag);
-      newTagIndex = (currentTagIndex + shiftValue + inverterValue) % tags.length;
+      newTagIndex =
+        (currentTagIndex + shiftValue + inverterValue) % tags.length;
     }
 
     let newTagPos = tags[newTagIndex].find();
