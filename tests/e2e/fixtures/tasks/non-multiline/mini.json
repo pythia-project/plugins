@@ -1,0 +1,10 @@
+{
+  "sourceCode": [
+    {
+      "template": "while @@cond@@:",
+      "language": "python",
+      "options": {}
+    }
+  ],
+  "type": "input-output"
+}
