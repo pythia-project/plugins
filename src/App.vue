@@ -107,7 +107,7 @@ export default {
   },
   computed: {
     pythiaUrl() {
-      return this.url || window.PYTHIA_URL || "http://localhost:3000";
+      return this.url || window.PYTHIA_URL || "http://localhost:8080";
     },
   },
   mounted() {
